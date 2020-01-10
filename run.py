@@ -1,12 +1,11 @@
 """
-This script assumes the adversary has the same training set as the target.
-The adversary is allowed to query the target model once for each training sample.
-
 This code is testing the effectiveness of substitute black box attack assuming
 the output from the black box target model is ONLY the resulting label.
 
-The substitute model is trained on the training set with the target's label
+The substitute model is trained on the test set with the target's label
 predictions.
+
+The adversary is allowed to query the target model once for each test sample.
 
 CW white box attack is used on the substitute model. 
 
@@ -72,22 +71,25 @@ def get_target_labels(data):
             metrics=['accuracy'])
     train_labels = model.predict(data.train_data)
     validation_labels = model.predict(data.validation_data)
+    test_labels = model.predict(data.test_data)
     #  Need to turn [p, p, ..., p] to y
     train_labels = train_labels.argmax(axis=-1)
     validation_labels = validation_labels.argmax(axis=-1)
+    test_labels = test_labels.argmax(axis=-1)
     # Turn y to [0, 0, ..., 1]
     train_labels = keras.utils.to_categorical(train_labels, 10)
     validation_labels = keras.utils.to_categorical(validation_labels, 10)
+    test_labels = keras.utils.to_categorical(test_labels, 10)
 
-    return (train_labels, validation_labels)
+    return (train_labels, validation_labels, test_labels)
 
-def train_substitute(data, file_name, tl, vl, num_epochs=1, batch_size=128, train_temp=1, init=None):
+def train_substitute(data, file_name, tl, num_epochs=1, batch_size=128, train_temp=1, init=None):
     """
     Create a model (different than target) and train using true data
     samples and labels from the target model)
     """
     # Get labels for training and validation data
-    training_labels, validation_labels = tl, vl
+    test_labels = tl
     
     # Create another model
     model = Sequential()
@@ -113,9 +115,9 @@ def train_substitute(data, file_name, tl, vl, num_epochs=1, batch_size=128, trai
     model.compile(loss=keras.losses.categorical_crossentropy,
             optimizer=sgd,
             metrics=['accuracy'])
-    model.fit(data.train_data, training_labels,
+    model.fit(data.test_data, test_labels,
         batch_size=batch_size,
-        validation_data=(data.validation_data, validation_labels),
+        validation_data=(data.test_data, test_labels),
         nb_epoch=num_epochs,
         shuffle=True)
     if file_name != None:
@@ -306,14 +308,15 @@ def main():
     print("+------------------+")
     print("|Training Sub Model|")
     print("+------------------+")
-    training_labels, validation_labels = get_target_labels(MNIST())
-    train_substitute(MNIST(), "models/sub", training_labels, validation_labels, num_epochs=5)
+    training_labels, validation_labels, test_labels = get_target_labels(MNIST())
+    train_substitute(MNIST(), "models/sub", test_labels, num_epochs=5)
     print("+------+")
     print("|Attack|")
     print("+------+")
     m = MNIST()
     m.train_labels = training_labels
     m.validation_labels = validation_labels
+    m.test_labels = test_labels
     attack_substitute(m, "models/sub", "models/mnist", stop=False)
 
 if __name__ == "__main__":
