@@ -115,9 +115,9 @@ def train_substitute(data, file_name, tl, num_epochs=1, batch_size=128, train_te
     model.compile(loss=keras.losses.categorical_crossentropy,
             optimizer=sgd,
             metrics=['accuracy'])
-    model.fit(data.test_data, test_labels,
+    model.fit(data.test_data[:5000], test_labels[:5000],
         batch_size=batch_size,
-        validation_data=(data.test_data, test_labels),
+        validation_data=(data.test_data[5000:], test_labels[5000:]),
         nb_epoch=num_epochs,
         shuffle=True)
     if file_name != None:
