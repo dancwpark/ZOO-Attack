@@ -7,4 +7,4 @@
 * pillow
 
 ## Assumptions
-* Has access to the training set
+* in progress of changing
