@@ -26,10 +26,10 @@ from keras.optimizers import SGD
 from keras.models import model_from_yaml
 from PIL import Image
 
-from setup_simple_mnist_1 import SMNIST, SMNISTModel
-#from setup_simple_mnist_2 import SMNIST, SMNISTModel
-#from setup_simple_mnist_3 import SMNIST, SMNISTModel
-#from setup_simple_mnist_4 import SMNIST, SMNISTModel
+from setup_mnist import SMNISTModel_1 as SMNISTModel
+#from setup_mnist import SMNISTModel_2 as SMNISTModel
+#from setup_mnist import SMNISTModel_3 as SMNISTModel
+#from setup_mnist import SMNISTModel_4 as SMNISTModel
 from setup_mnist import MNIST, MNISTModel
 from setup_mnist_sub import MNIST_sub, MNISTModel_sub
 from l2_attack import CarliniL2
