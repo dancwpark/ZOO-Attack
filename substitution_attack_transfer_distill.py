@@ -241,7 +241,7 @@ def attack_substitute(data, subfile, targetfile, stop=True):
         
         # Train Simple MNIST
         print("Training simple model")
-        simple = train_target_two(SMNIST(), "models/simple", num_epochs=5)
+        simple = train_target_two(MNIST(), "models/simple", num_epochs=5)
         print(">> Done")
 
 
