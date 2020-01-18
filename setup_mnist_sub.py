@@ -90,3 +90,151 @@ class MNISTModel_sub:
     def predict(self, data):
         return self.model(data)
 
+class MNISTModel_sub2:
+    def __init__(self, restore=None, session=None, use_log=False):
+        self.num_channels = 1
+        self.image_size = 28
+        self.num_labels = 10
+
+        model = Sequential()
+        model.add(Conv2D(32, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(Conv2D(32, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(Conv2D(32, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(MaxPooling2D(pool_size=(2,2)))
+        
+        model.add(Conv2D(64, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(Conv2D(64, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(Conv2D(64, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(MaxPooling2D(pool_size=(2,2)))
+        
+        model.add(Flatten())
+        model.add(Dense(200))
+        model.add(Activation('relu'))
+        model.add(Dense(200))
+        model.add(Activation('relu'))
+        model.add(Dense(10))
+
+        if use_log:
+            model.add(Activation('softmax'))
+        if restore:
+            model.load_weights(restore)
+        self.model = model
+    
+    def predict(self, data):
+        return self.model(data)
+    
+class MNISTModel_sub3:
+    def __init__(self, restore=None, session=None, use_log=False):
+        self.num_channels = 1
+        self.image_size = 28
+        self.num_labels = 10
+
+        model = Sequential()
+        model.add(Conv2D(32, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(Conv2D(32, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(Conv2D(32, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(MaxPooling2D(pool_size=(2,2)))
+        
+        model.add(Conv2D(64, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(Conv2D(64, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(Conv2D(64, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(MaxPooling2D(pool_size=(2,2)))
+        
+        model.add(Flatten())
+        model.add(Dense(200))
+        model.add(Activation('relu'))
+        model.add(Dense(200))
+        model.add(Activation('relu'))
+        model.add(Dense(200))
+        model.add(Activation('relu'))
+        model.add(Dense(10))
+
+        if use_log:
+            model.add(Activation('softmax'))
+        if restore:
+            model.load_weights(restore)
+        self.model = model
+    
+    def predict(self, data):
+        return self.model(data)
+
+class MNISTModel_sub4:
+    # TODO: Try training with training set to get comparable classification accuracy
+    def __init__(self, restore=None, session=None, use_log=False):
+        self.num_channels = 1
+        self.image_size = 28
+        self.num_labels = 10
+
+        model = Sequential()
+        model.add(Conv2D(32, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(Conv2D(32, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(Conv2D(32, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(Conv2D(32, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(MaxPooling2D(pool_size=(2,2)))
+ 
+        model.add(Conv2D(64, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(Conv2D(64, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(Conv2D(64, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(Conv2D(64, (3,3),
+            input_shape=(28,28,1)))
+        model.add(Activation('relu'))
+        model.add(MaxPooling2D(pool_size=(2,2)))
+ 
+
+        model.add(Flatten())
+        model.add(Dense(200))
+        model.add(Activation('relu'))
+        model.add(Dense(200))
+        model.add(Activation('relu'))
+        model.add(Dense(200))
+        model.add(Activation('relu'))
+        model.add(Dense(10))
+
+        if use_log:
+            model.add(Activation('softmax'))
+        if restore:
+            model.load_weights(restore)
+        self.model = model
+    
+    def predict(self, data):
+        return self.model(data)
+
+
