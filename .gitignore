@@ -1,0 +1,13 @@
+__pycache__/
+*.png*
+*.py[cod]
+*$py.class
+models/
+data/
+results/
+saved_results/
+tmp/
+cifar-10-batches-bin/
+*.tar.gz
+*.out
+*.txt
