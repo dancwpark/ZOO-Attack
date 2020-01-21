@@ -271,7 +271,7 @@ def attack_substitute(data, subfile, targetfile, stop=True):
                 print("diff")
                 show(adv - inputs)
                 print("Test on target model")
-                target_prediction = model.model.predict(adv)
+                target_prediction = model_target.model.predict(adv)
                 target_prediction = np.squeeze(target_prediction)
                 target_class = np.argsort(target_prediction)
                 if target_class[-1] != original_class[-1]:
