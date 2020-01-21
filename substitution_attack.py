@@ -5,13 +5,10 @@ the output from the black box target model is ONLY the resulting label.
 The substitute model is trained on the test set with the target's label
 predictions.
 
-The adversary is allowed to query the target model once for each test sample.
-
 CW white box attack is used on the substitute model. 
 
 The successful attacks are also tested against the black box target model.
 """
-
 import os
 import sys
 import tensorflow as tf
@@ -25,11 +22,15 @@ from keras.layers import Conv2D, MaxPooling2D
 from keras.optimizers import SGD
 from keras.models import model_from_yaml
 from PIL import Image
-
-from setup_mnist import MNIST, MNISTModel
-from setup_mnist_sub import MNIST_sub, MNISTModel_sub
 from l2_attack import CarliniL2
-from l2_attack_black import BlackBoxL2
+################
+# Target Model #
+################
+from setup_mnist import MNIST, MNISTModel
+####################
+# Substitute Model #
+####################
+from setup_mnist_sub import MNIST_sub, MNISTModel_sub
 
 def train_target(data, file_name, num_epochs=50, batch_size=128, train_temp=1, init=None):
     """
@@ -38,18 +39,15 @@ def train_target(data, file_name, num_epochs=50, batch_size=128, train_temp=1, i
     model = MNISTModel(use_log=True).model
     if init != None:
         model.load_weights(init)
-
     sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(loss=keras.losses.categorical_crossentropy,
             optimizer=sgd,
             metrics=['accuracy'])
-
     model.fit(data.train_data, data.train_labels,
             batch_size=batch_size,
             validation_data=(data.validation_data, data.validation_labels),
             nb_epoch=num_epochs,
             shuffle=True)
-
     if file_name != None:
         model.save(file_name)
 

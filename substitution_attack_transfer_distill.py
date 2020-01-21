@@ -25,15 +25,23 @@ from keras.layers import Conv2D, MaxPooling2D
 from keras.optimizers import SGD
 from keras.models import model_from_yaml
 from PIL import Image
+from l2_attack import CarliniL2
 
-from setup_mnist import SMNISTModel_1 as SMNISTModel
+################
+# Simple Model #
+################
+#from setup_mnist import SMNISTModel_1 as SMNISTModel
 #from setup_mnist import SMNISTModel_2 as SMNISTModel
 #from setup_mnist import SMNISTModel_3 as SMNISTModel
-#from setup_mnist import SMNISTModel_4 as SMNISTModel
+from setup_mnist import SMNISTModel_4 as SMNISTModel
+################
+# Target Model #
+################
 from setup_mnist import MNIST, MNISTModel
+####################
+# Substitute Model #
+####################
 from setup_mnist_sub import MNIST_sub, MNISTModel_sub
-from l2_attack import CarliniL2
-from l2_attack_black import BlackBoxL2
 
 target_a = 0.
 sub_a = 0.
@@ -72,6 +80,7 @@ def train_target(data, file_name, num_epochs=50, batch_size=128, train_temp=1, i
 def train_target_two(data, file_name, num_epochs=50, batch_size=128, train_temp=1, init=None):
     """
     Standard neural network training procedure.
+    Trains, the simple model
     """
     global simple_a
     model = SMNISTModel(use_log=True).model

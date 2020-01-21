@@ -46,6 +46,7 @@ from setup_mnist import SMNISTModel_1 as SMNISTModel
 #from setup_mnist_sub import MNISTModel_sub2 as MNISTModel_sub
 #from setup_mnist_sub import MNISTModel_sub3 as MNISTModel_sub
 from setup_mnist_sub import MNISTModel_sub4 as MNISTModel_sub
+
 # TODO train sub4 on validation dataset labeled by target dataset
 ## Substitute acc. volatile
 
@@ -83,10 +84,10 @@ def train_target(data, file_name, num_epochs=50, batch_size=128, train_temp=1, i
     print("Target model test accuracy on clean data: ", score[1])
     return model
 
-
 def train_target_two(data, file_name, num_epochs=50, batch_size=128, train_temp=1, init=None):
     """
     Standard neural network training procedure.
+    Trains simple model
     """
     global simple_a
     model = SMNISTModel(use_log=True).model

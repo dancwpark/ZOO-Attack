@@ -208,7 +208,7 @@ class SMNISTModel_4:
 
         model = Sequential()
 
-        model.add(Flatten())
+        model.add(Flatten(input_shape=(28,28,1)))
         model.add(Dense(200))
         model.add(Activation('relu'))
         model.add(Dense(200))

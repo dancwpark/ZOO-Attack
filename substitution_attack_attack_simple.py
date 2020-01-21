@@ -28,7 +28,7 @@ from setup_mnist import MNIST, MNISTModel
 #from setup_mnist import SMNISTModel_1 as SMNISTModel
 #from setup_mnist import SMNISTModel_2 as SMNISTModel
 from setup_mnist import SMNISTModel_3 as SMNISTModel
-#from setup_mnist import SMNISTModel_4 as SMNISTModel
+from setup_mnist import SMNISTModel_4 as SMNISTModel
 ####################
 # Substitute Model #
 ####################
@@ -134,7 +134,7 @@ def get_target_labels(data):
 
     return (train_labels, validation_labels, test_labels)
 
-def get_target_labels_simple(data, model, load):
+def get_target_labels_simple(data):
     """
     Get labels as returned by model with loaded 
     weights.
@@ -144,8 +144,8 @@ def get_target_labels_simple(data, model, load):
     load =  "models/mnist" for example
     """
     print("Getting labels from specified model")
-    s_model = model.model
-    s_model.load_weights(load)
+    s_model = SMNISTModel().model
+    s_model.load_weights("models/simple")
     sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     s_model.compile(loss=keras.losses.categorical_crossentropy,
             optimizer=sgd,
@@ -452,9 +452,8 @@ def main():
     n.train_labels = training_labels
     n.validation_labels = validation_labels
     n.test_labels = test_labels
-    # Get labels from test model
-    training_labels, validation_labels, test_labels = get_target_labels_simple(MNIST(),
-            SMNISTModel(), "models/simple")
+    # Get labels from simple model
+    training_labels, validation_labels, test_labels = get_target_labels_simple(MNIST())
     m = MNIST()
     m.train_labels = training_labels
     m.validation_labels = validation_labels
@@ -479,6 +478,7 @@ def main():
             "models/simple", 
             stop=False)
     print("----------------------------------")
+    print("STATS")
     print("Target acc: {}, \n"
           "sub_t acc: {},  \n"
           "Success on sub_t: {}, \n"
