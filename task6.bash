@@ -22,6 +22,10 @@ for dataset in mnist cifar10
 do
     FILENAME="./results/task6/${prefix}_$dataset.out"
     echo $first_line > $FILENAME
+    # Run against distillation defense
+    # mnist and cifar10
+    # black box attack
+    # do not use logits -- but we are not applying our defense
     single_line=$(python test_all-distilled.py -d $dataset -a $attack -z -b 9 -n $num_imgs --solver adam $untargeted | grep L5)
     A="$(cut -d',' -f3 <<< $single_line)"
     C="$(cut -d',' -f5 <<< $single_line)"

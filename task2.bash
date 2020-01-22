@@ -24,7 +24,10 @@ do
    
     for noise in 0 0.0001 0.001 0.01 0.1 0.25 0.5 1 10
     do
+        # For imagement, do defense with stddev $noise with binary_steps 9 (for attack)
+        # for 11 image for attack.
         single_line=$(python test_all.py -d $dataset -a $attack -N $noise -D -b 9 -n $num_imgs --solver adam $untargeted | grep L5)
+        # After softmax 
         echo $single_line
         A="$(cut -d',' -f3 <<< $single_line)"
         C="$(cut -d',' -f5 <<< $single_line)"
