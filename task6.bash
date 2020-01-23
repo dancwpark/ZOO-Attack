@@ -17,7 +17,7 @@ first_line="query_count,ASR,distortion"
 attack="black"
 num_imgs=11
 untargeted=""
-prefix="T"
+prefix="S" #U untargeted/ T targeted / S Stupid testing by Dan
 for dataset in mnist cifar10
 do
     FILENAME="./results/task6/${prefix}_$dataset.out"
