@@ -22,7 +22,8 @@ from keras.layers import Conv2D, MaxPooling2D
 from keras.optimizers import SGD
 from keras.models import model_from_yaml
 from PIL import Image
-from l2_attack import CarliniL2
+#from l2_attack import CarliniL2
+from l2_attack_w_defense import CarliniL2 # with defense and averaging
 ################
 # Target Model #
 ################
@@ -205,7 +206,8 @@ def attack_substitute(data, subfile, targetfile, stop=True):
                 learning_rate=1e-2,
                 initial_const=.5,
                 binary_search_steps=1,
-                targeted = True)
+                targeted = True,
+                defense=True) # noise choose
 
         all_inputs, all_targets, all_labels, all_true_ids = generate_data(data, 
                 samples=20, 
