@@ -8,6 +8,7 @@
 
 import sys
 import tensorflow as tf
+import keras.backend as K
 import numpy as np
 import time
 
@@ -98,7 +99,8 @@ class CarliniL2:
         if self.DEFENSE: # Adaptive attack defined by k
             def_noise = tf.zeros(tf.shape(self.output))
             for i in range(self.K_SAMPS):
-                def_noise = def_noise+tf.random.normal(tf.shape(self.output), mean=0.0, stddev=noise)
+                #def_noise = def_noise+tf.random.normal(tf.shape(self.output), mean=0.0, stddev=noise)
+                def_noise = def_noise+K.random_normal(tf.shape(self.output), mean=0.0, stddev=noise)
             self.output = self.output + (def_noise / self.K_SAMPS)
         elif self.MIX_DEFENSE:
             std_params =  [0.1, 0.05, 0.03, 0.02, 0.01]

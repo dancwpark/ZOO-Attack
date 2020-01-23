@@ -357,7 +357,7 @@ def attack_substitute(data, subfile, model_type, targetfile, stop=True):
             # Create the adversarial example
             img_no += 1
             timestart = time.time()
-            adv, const = attack.attack_batch(inputs, targets) # HERE
+            adv, const, _ = attack.attack_batch(inputs, targets) # HERE
             if type(const) is list:
                 const = const[0]
             if len(adv.shape) == 3:

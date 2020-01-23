@@ -306,7 +306,7 @@ def attack_substitute(data, subfile, targetfile, stop=True):
 
             img_no += 1
             timestart = time.time()
-            adv, const = attack.attack_batch(inputs, targets)
+            adv, const, _ = attack.attack_batch(inputs, targets)
             if type(const) is list:
                 const = const[0]
             if len(adv.shape) == 3:

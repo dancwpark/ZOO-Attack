@@ -170,6 +170,9 @@ class CarliniL2:
 
         batch_size = self.batch_size
 
+        # Query counter
+        query_counter = 0
+
         # convert to tanh-space
         imgs = np.arctanh(imgs*1.999999)
 
@@ -223,7 +226,10 @@ class CarliniL2:
                                                          self.newimg])
 
                 new_modifier = self.sess.run(self.modifier)
-                
+               
+
+                query_counter+=1
+
                 # print(grad[0].reshape(-1))
                 # print((old_modifier - new_modifier).reshape(-1))
 
@@ -271,4 +277,4 @@ class CarliniL2:
 
         # return the best solution found
         o_bestl2 = np.array(o_bestl2)
-        return np.array(o_bestattack), o_best_const
+        return np.array(o_bestattack), o_best_const, query_counter

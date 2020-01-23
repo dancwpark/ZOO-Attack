@@ -5,13 +5,10 @@ the output from the black box target model is ONLY the resulting label.
 The substitute model is trained on the test set with the target's label
 predictions.
 
-The adversary is allowed to query the target model once for each test sample.
-
 CW white box attack is used on the substitute model. 
 
 The successful attacks are also tested against the black box target model.
 """
-
 import os
 import sys
 import tensorflow as tf
@@ -26,94 +23,75 @@ from keras.optimizers import SGD
 from keras.models import model_from_yaml
 from PIL import Image
 from l2_attack import CarliniL2
-from l2_attack_black import BlackBoxL2
+#from l2_attack_w_defense import CarliniL2 # with defense and averaging
 ################
 # Target Model #
 ################
 from setup_mnist import MNIST, MNISTModel
-######################################
-# Simple model for transference test #
-######################################
-from setup_mnist import SMNISTModel_1 as SMNISTModel
-#from setup_mnist import SMNISTModel_2 as SMNISTModel
-#from setup_mnist import SMNISTModel_3 as SMNISTModel
-#from setup_mnist import SMNISTModel_4 as SMNISTModel
 ####################
 # Substitute Model #
 ####################
-#from setup_mnist_sub import MNISTModel_sub
-from setup_mnist import MNISTModel as MNISTModel_sub
-#from setup_mnist_sub import MNISTModel_sub2 as MNISTModel_sub
-#from setup_mnist_sub import MNISTModel_sub3 as MNISTModel_sub
-#from setup_mnist_sub import MNISTModel_sub4 as MNISTModel_sub
-
-# TODO train sub4 on validation dataset labeled by target dataset
-## Substitute acc. volatile
-
-# Global Variables
-target_a = 0.
-sub_a = 0.
-simple_a = 0.
-
+from setup_mnist_sub import MNIST_sub, MNISTModel_sub
 
 def train_target(data, file_name, num_epochs=50, batch_size=128, train_temp=1, init=None):
     """
     Standard neural network training procedure.
     """
-    global target_a
     model = MNISTModel(use_log=True).model
     if init != None:
         model.load_weights(init)
-
     sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(loss=keras.losses.categorical_crossentropy,
             optimizer=sgd,
             metrics=['accuracy'])
-
     model.fit(data.train_data, data.train_labels,
             batch_size=batch_size,
             validation_data=(data.validation_data, data.validation_labels),
             nb_epoch=num_epochs,
-            shuffle=False)
-
+            shuffle=True)
     if file_name != None:
         model.save(file_name)
 
     score = model.evaluate(data.test_data, data.test_labels, verbose=0)
-    target_a = score[1]
     print("Target model test accuracy on clean data: ", score[1])
     return model
 
-def train_target_two(data, file_name, num_epochs=50, batch_size=128, train_temp=1, init=None):
+# For testing purposes
+# Example of adding noise before and after softmax
+def test_target(data, file_name, num_epochs=50, batch_size=128, train_temp=1, init=None):
     """
     Standard neural network training procedure.
-    Trains simple model
     """
-    global simple_a
-    model = SMNISTModel(use_log=True).model
-    if init != None:
-        model.load_weights(init)
+    # Add noise before
+    print("Adding noise before softmax")
+    with tf.Session() as sess:
+        model = MNISTModel(restore=file_name, session=sess, use_log=False).model
+        pred = model.model.predict(data.test_data)
+        pred_1 = tf.convert_to_tensor(pred[0])
+        pred_n = pred_1+keras.backend.random_normal(tf.shape(pred_1), mean=0.0, stddev=0.1)
+        pred_2 = tf.nn.softmax(pred_1)
+        pred_n1 = tf.nn.softmax(pred_n)
+        pred_n2 = pred_n1+keras.backend.random_normal(tf.shape(pred_n1), mean=0.0, stddev=0.1)
+        pred_3 = pred_2+keras.backend.random_normal(tf.shape(pred_1), mean=0.0, stddev=0.1)
+        
+        model = MNISTModel(restore=file_name, session=sess, use_log=True).model
+        pred_0 = model.model.predict(data.test_data)[0]
 
-    sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-    model.compile(loss=keras.losses.categorical_crossentropy,
-            optimizer=sgd,
-            metrics=['accuracy'])
-
-    model.fit(data.train_data, data.train_labels,
-            batch_size=batch_size,
-            validation_data=(data.validation_data, data.validation_labels),
-            nb_epoch=num_epochs,
-            shuffle=False)
-
-    if file_name != None:
-        model.save(file_name)
-
-    score = model.evaluate(data.test_data, data.test_labels, verbose=0)
-    simple_a = score[1]
-    print("Simple model test accuracy on clean data: ", score[1])
-    return model
-
-
+        print("True")
+        print(pred_0)
+        print(np.argmax(pred_0))
+        print(np.argsort(pred_0))
+        print()
+        print("Noise 1")
+        print(pred_3.eval())
+        print(np.argmax(pred_3.eval()))
+        print(np.argsort(pred_3.eval()))
+        print()
+        print("Noise 2")
+        print(pred_n2.eval())
+        print(np.argmax(pred_n2.eval()))
+        print(np.argsort(pred_n2.eval()))
+        print()
 
 def get_target_labels(data):
     """
@@ -141,64 +119,81 @@ def get_target_labels(data):
 
     return (train_labels, validation_labels, test_labels)
 
-
-
-def train_substitute_val(data, file_name, tl, num_epochs=1, batch_size=128, train_temp=1, init=None):
+def train_substitute_debug(data, file_name, tl, num_epochs=1, batch_size=128, train_temp=1, init=None):
     """
     Create a model (different than target) and train using true data
     samples and labels from the target model)
     """
-    global sub_a
     # Get labels for training and validation data
     test_labels = tl
     
-    model = MNISTModel_sub(use_log=True).model
-    if init != None:
-        model.load_weights(init)
+    # Create another model
+    model = Sequential()
+    # input shape ordering
+    if keras.backend.image_dim_ordering() == 'th':
+        input_shape = (1, 28, 28)
+    else:
+        input_shape = (28, 28, 1)
+
+    layers = [Flatten(input_shape=input_shape),
+            Dense(200),
+            Activation('relu'),
+            Dropout(0.5),
+            Dense(200),
+            Activation('relu'),
+            Dropout(0.5),
+            Dense(10),
+            Activation('softmax')]
+    for layer in layers:
+        model.add(layer)
 
     sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(loss=keras.losses.categorical_crossentropy,
             optimizer=sgd,
             metrics=['accuracy'])
- 
-    model.fit(data.test_data[:5000], test_labels[:5000],
+    model.fit(data.train_data, data.train_labels,
         batch_size=batch_size,
-        validation_data=(data.test_data[5000:], test_labels[5000:]),
+        validation_data=(data.validation_data, data.validation_labels),
         nb_epoch=num_epochs,
         shuffle=True)
-    
-    model.fit(data.validation_data, data.validation_labels,
-            batch_size=batch_size,
-            validation_data=(data.test_data[5000:], test_labels[5000:]),
-            nb_epoch=num_epochs,
-            shuffle=True)
-
     if file_name != None:
         model.save(file_name)
 
     score = model.evaluate(data.test_data, data.test_labels, verbose=0)
-    sub_a = score[1]
     print("Substitute model test accuracy on clean data: ", score[1])
-
 
 def train_substitute(data, file_name, tl, num_epochs=1, batch_size=128, train_temp=1, init=None):
     """
     Create a model (different than target) and train using true data
     samples and labels from the target model)
     """
-    global sub_a
     # Get labels for training and validation data
     test_labels = tl
     
-    model = MNISTModel_sub(use_log=True).model
-    if init != None:
-        model.load_weights(init)
+    # Create another model
+    model = Sequential()
+    # input shape ordering
+    if keras.backend.image_dim_ordering() == 'th':
+        input_shape = (1, 28, 28)
+    else:
+        input_shape = (28, 28, 1)
+
+    layers = [Flatten(input_shape=input_shape),
+            Dense(200),
+            Activation('relu'),
+            Dropout(0.5),
+            Dense(200),
+            Activation('relu'),
+            Dropout(0.5),
+            Dense(10),
+            Activation('softmax')]
+    for layer in layers:
+        model.add(layer)
 
     sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(loss=keras.losses.categorical_crossentropy,
             optimizer=sgd,
             metrics=['accuracy'])
- 
     model.fit(data.test_data[:5000], test_labels[:5000],
         batch_size=batch_size,
         validation_data=(data.test_data[5000:], test_labels[5000:]),
@@ -208,10 +203,7 @@ def train_substitute(data, file_name, tl, num_epochs=1, batch_size=128, train_te
         model.save(file_name)
 
     score = model.evaluate(data.test_data, data.test_labels, verbose=0)
-    sub_a = score[1]
     print("Substitute model test accuracy on clean data: ", score[1])
-
-
 
 def generate_data(data, samples, targeted=True, start=0, inception=False):
     """
@@ -274,17 +266,9 @@ def show(img, name='output.png', save=False):
 def attack_substitute(data, subfile, targetfile, stop=True):
     with tf.Session() as sess:
         print(">> Loading Models")
-        # Load substitute
         model = MNISTModel_sub(restore=subfile, session=sess, use_log=True)
-        # Load target
         model_target = MNISTModel(restore=targetfile, session=sess, use_log=True)
         print("... Done ...")
-        
-        # Train Simple MNIST
-        print("Training simple model")
-        simple = train_target_two(MNIST(), "models/simple", num_epochs=5)
-        print(">> Done")
-
 
         # Attack
         use_log = True
@@ -300,9 +284,10 @@ def attack_substitute(data, subfile, targetfile, stop=True):
                 use_log=use_log, 
                 early_stop_iters=100,
                 learning_rate=1e-2,
-                initial_const=.5,
+                initial_const=1.,
                 binary_search_steps=1,
                 targeted = True)
+                #defense=True) # noise choose
 
         all_inputs, all_targets, all_labels, all_true_ids = generate_data(data, 
                 samples=20, 
@@ -313,10 +298,8 @@ def attack_substitute(data, subfile, targetfile, stop=True):
         img_no = 0
         total_success = 0
         total_transfers = 0
-        s_successes= 0
         l2_total = 0.
-        s_wrong = 0
-        s_target = 0
+        total_queries = 0.
         for i in range(all_true_ids.size):
             inputs = all_inputs[i:i+1]
             targets = all_targets[i:i+1]
@@ -338,7 +321,8 @@ def attack_substitute(data, subfile, targetfile, stop=True):
 
             img_no += 1
             timestart = time.time()
-            adv, const, _ = attack.attack_batch(inputs, targets)
+            #adv, const = attack.attack_batch(inputs, targets)
+            adv, const, q_count = attack.attack_batch(inputs, targets) # w/ defense
             if type(const) is list:
                 const = const[0]
             if len(adv.shape) == 3:
@@ -375,25 +359,10 @@ def attack_substitute(data, subfile, targetfile, stop=True):
                 if target_class[-1] != original_class[-1]:
                     print(">> :)  Adversarial example transfers")
                     total_transfers += 1
+                    total_queries+=q_count
                 else:
                     print(">> :( Does not transfer")
-                o_prediction = simple.predict(inputs)
-                o_prediction = np.squeeze(o_prediction)
-                o_class = np.argsort(o_prediction)
-                simple_prediction = simple.predict(adv)
-                simple_prediction = np.squeeze(simple_prediction)
-                simple_class = np.argsort(simple_prediction)
-                if o_class[-1] != simple_class[-1]:
-                    if o_class[-1] != np.argmax(labels):
-                        print("Simple got wrong initially")
-                        s_wrong += 1
-                        continue
-                    print("SUCCESS on simple")
-                    s_successes += 1
-                    if simple_class[-1] == np.argmax(targets):
-                        s_target += 1
-                else:
-                    print("FAIL on simple")
+                    print(target_class, original_class)
                 if stop:
                     input(">>> Enter to continue")
             else:
@@ -408,32 +377,146 @@ def attack_substitute(data, subfile, targetfile, stop=True):
             sys.stdout.flush()
         
         print("Done with experiments")
-        print("Target accuracy:", target_a)
-        print("Substitute accuracy:", sub_a)
-        print("Simple accuracy:", simple_a)
         print("Stats of interest")
         print("Successes:", total_success)
         print("Transfers:", total_transfers)
         print("Transfer Rate: {}".format(0 if total_success==0 else total_transfers/total_success))
-        print("Simple - Attack successes:", s_successes)
-        print("Simple - Initial wrong:", s_wrong)
-        print("Simple - Correct target:", s_target)
+        print("Total Queries:", total_queries)
+
+def attack_substitute_untarget(data, subfile, targetfile, stop=True):
+    with tf.Session() as sess:
+        print(">> Loading Models")
+        model = MNISTModel_sub(restore=subfile, session=sess, use_log=True)
+        model_target = MNISTModel(restore=targetfile, session=sess, use_log=True)
+        print("... Done ...")
+
+        # Attack
+        use_log = True
+        random.seed(1216)
+        np.random.seed(1216)
+
+        attack = CarliniL2(sess, 
+                model, 
+                batch_size=1, 
+                max_iterations=3000, 
+                print_every=100, 
+                confidence=20, 
+                use_log=use_log, 
+                early_stop_iters=100,
+                learning_rate=0.01,
+                initial_const=0.01,
+                binary_search_steps=9,
+                targeted = False)
+                #defense=True) # noise choose
+
+        all_inputs, all_targets, all_labels, all_true_ids = generate_data(data, 
+                samples=20, 
+                targeted=False, 
+                start=1, 
+                inception=False)
+        
+        img_no = 0
+        total_success = 0
+        total_transfers = 0
+        l2_total = 0.
+        total_queries = 0.
+        for i in range(all_true_ids.size):
+            inputs = all_inputs[i:i+1]
+            targets = all_targets[i:i+1]
+            labels = all_labels[i:i+1]
+            print("true labels:", np.argmax(labels), labels)
+            print("target:", np.argmax(targets), targets)
+            # test if the image is correctly classified
+            original_predict = model.model.predict(inputs)
+            original_predict = np.squeeze(original_predict)
+            original_prob = np.sort(original_predict)
+            original_class = np.argsort(original_predict)
+            print("original probs:", original_prob[-1:-6:-1])
+            print("original class:", original_class[-1:-6:-1])
+            print("original probs (most unlikely):", original_prob[:6])
+            print("original class (most unliekly):", original_class[:6])
+            if original_class[-1] != np.argmax(labels):
+                print("Skip: wrongly classified image no. {}, original class {}, classified as {}".format(i, np.argmax(labels), original_class[-1]))
+                continue
+
+            img_no += 1
+            timestart = time.time()
+            #adv, const = attack.attack_batch(inputs, targets)
+            adv, const, q_count = attack.attack_batch(inputs, targets) # w/ defense
+            if type(const) is list:
+                const = const[0]
+            if len(adv.shape) == 3:
+                adv = adv.reshape((1,) + adv.shape)
+            timeend = time.time()
+            l2_distortion = np.sum((adv-inputs)**2)**.5
+            adversarial_predict = model.model.predict(adv)
+            adversarial_predict = np.squeeze(adversarial_predict)
+            adversarial_prob = np.sort(adversarial_predict)
+            adversarial_class = np.argsort(adversarial_predict)
+            print("adversarial probabilities:", adversarial_prob[-1:-6:-1])
+            print("adversarial classification:", adversarial_class[-1:-6:-1])
+            success = False
+            if adversarial_class[-1] != np.argmax(labels):
+                success = True
+            if l2_distortion > 20.:
+                success = False
+            if success:
+                print("+-------+")
+                print("|SUCCESS|")
+                print("+-------+")
+                total_success += 1
+                l2_total += l2_distortion
+                print("original")
+                show(inputs)
+                print("adversarial")
+                show(adv)
+                print("diff")
+                show(adv - inputs)
+                print("Test on target model")
+                target_prediction = model_target.model.predict(adv)
+                target_prediction = np.squeeze(target_prediction)
+                target_class = np.argsort(target_prediction)
+                if target_class[-1] != np.argmax(labels):
+                    print(">> :)  Adversarial example transfers")
+                    total_transfers += 1
+                    total_queries+=q_count
+                else:
+                    print(">> :( Does not transfer")
+                    print(target_class, original_class)
+                if stop:
+                    input(">>> Enter to continue")
+            else:
+                print("+----+")
+                print("|FAIL|")
+                print("+----+")
+            
+            print("[STATS][L1] total={}, seq={}, id={}, time={:.3f}, success={}, const={:.6f}, prev_class={}, new_class={}, distortion={:.5f}, success_rate={:.3f}, l2_avg={:.5f}, transfer_rate={}".format(img_no, i, all_true_ids[i], timeend-timestart, success, const, original_class[-1], adversarial_class[-1], l2_distortion, total_success/float(img_no), 0 if total_success==0 else l2_total/total_success, 0 if total_success==0 else total_transfers/total_success))
+            print()
+            print()
+            print()
+            sys.stdout.flush()
+        
+        print("Done with experiments")
+        print("Stats of interest")
+        print("Successes:", total_success)
+        print("Transfers:", total_transfers)
+        print("Transfer Rate: {}".format(0 if total_success==0 else total_transfers/total_success))
+        print("Total Queries:", total_queries)
+
 
 def main():
+    # Trying untargeted attack
     print()
     print("+---------------------+")
     print("|Training Target Model|")
     print("+---------------------+")
     train_target(MNIST(), "models/mnist", num_epochs=5)
+    #test_target(MNIST(), "models/mnist")
     print("+------------------+")
     print("|Training Sub Model|")
     print("+------------------+")
     training_labels, validation_labels, test_labels = get_target_labels(MNIST())
-    m = MNIST()
-    m.train_labels = training_labels
-    m.validation_labels = validation_labels
-    m.test_labels = test_labels
-    train_substitute_val(m, "models/sub", test_labels, num_epochs=5)
+    train_substitute_debug(MNIST(), "models/sub", test_labels, num_epochs=5)
     print("+------+")
     print("|Attack|")
     print("+------+")
@@ -441,10 +524,9 @@ def main():
     m.train_labels = training_labels
     m.validation_labels = validation_labels
     m.test_labels = test_labels
-    attack_substitute(m, "models/sub", "models/mnist", stop=False)
+    attack_substitute_untarget(m, "models/sub", "models/mnist", stop=False)
 
 if __name__ == "__main__":
     save_location = "models"
     os.system("mkdir -p {}".format(save_location))
     main()
-
