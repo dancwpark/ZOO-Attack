@@ -1,4 +1,4 @@
-## Copyright (C) IBM Corp, 2017-2018
+#Copyright (C) IBM Corp, 2017-2018
 
 from __future__ import absolute_import
 from __future__ import division
@@ -127,7 +127,7 @@ def prep_bbox(sess, x, y, X_train, Y_train, X_test, Y_test,
             'batch_size': batch_size,
             'learning_rate': learning_rate
         }
-        model_train(sess, x, y, predictions, X_train, Y_train, verbose=True, save=True,
+        model_train(sess, x, y, predictions, X_train, Y_train, save=False,
                     args=train_params)
 
     # Print out the accuracy on legitimate data

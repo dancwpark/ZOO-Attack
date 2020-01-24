@@ -80,10 +80,10 @@ if __name__ == "__main__":
     with tf.Session() as sess:
         use_log = False
         print('Loading model...')
-        # data, model =  MNIST(), MNISTModel("models/mnist", sess, use_log)
+        data, model =  MNIST(), MNISTModel("models/mnist", sess, use_log)
         # data, model =  MNIST(), MNISTModel("models/mnist-distilled-100", sess, use_log)
         # data, model = CIFAR(), CIFARModel("models/cifar", sess, use_log)
-        data, model = ImageNet(), InceptionModel(sess, use_log)
+        #data, model = ImageNet(), InceptionModel(sess, use_log)
         print('Done...')
         batch_size = 1
         if isinstance(model, InceptionModel):
