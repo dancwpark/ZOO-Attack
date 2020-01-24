@@ -15,10 +15,10 @@ import logging
 import numpy as np
 from six.moves import xrange
 import tensorflow as tf
+import time
 
 from cleverhans.attacks import FastGradientMethod
-#from cleverhans.utils_tf import jacobian_graph, jacobian_augmentation
-from cleverhans.attacks_tf import jacobian_graph, jacobian_augmentation
+from cleverhans.utils_tf import jacobian_graph, jacobian_augmentation
 from cleverhans.compat import flags
 from cleverhans.dataset import MNIST
 from cleverhans.initializers import HeReLuNormalInitializer
@@ -30,11 +30,16 @@ from cleverhans.utils import TemporaryLogLevel
 from cleverhans.utils import to_categorical
 from cleverhans.utils_tf import model_eval, batch_eval
 
-#from cleverhans.model_zoo.basic_cnn import ModelBasicCNN
-from testsub_model import ModelBasicCNN
+#from cleverhans.model_zoo.basic_cnn import ModelBasicCNN # No Defense
+from basic_cnn_post_noise import ModelBasicCNN # Noise added after logits layer
+#from basic_cnn_pre_noise import ModelBasicCNN # Noise added before logits layer
+#from basic_cnn_both_noise import ModelBasicCNN # Noise added before and after
+from cleverhans.attacks import CarliniWagnerL2
 
 FLAGS = flags.FLAGS
 
+#ATTACK = 'fgsm'
+ATTACK = 'cwl2'
 NB_CLASSES = 10
 BATCH_SIZE = 128
 LEARNING_RATE = .001
@@ -267,20 +272,55 @@ def mnist_blackbox(train_start=0, train_end=60000, test_start=0,
   eval_params = {'batch_size': batch_size}
   acc = model_eval(sess, x, y, preds_sub, x_test, y_test, args=eval_params)
   accuracies['sub'] = acc
+  
+  # Begin time
+  start = time.time()
 
-  # Initialize the Fast Gradient Sign Method (FGSM) attack object.
-  fgsm_par = {'eps': 0.3, 'ord': np.inf, 'clip_min': 0., 'clip_max': 1.}
-  fgsm = FastGradientMethod(model_sub, sess=sess)
+  if ATTACK == 'fgsm':
+    # Initialize the Fast Gradient Sign Method (FGSM) attack object.
+    fgsm_par = {'eps': 0.3, 'ord': np.inf, 'clip_min': 0., 'clip_max': 1.}
+    fgsm = FastGradientMethod(model_sub, sess=sess)
+    x_adv_sub = fgsm.generate(x, **fgsm_par)
+    
+    # Evaluate the accuracy of the "black-box" model on adversarial examples
+    eval_params = {'batch_size': batch_size}
+    accuracy = model_eval(sess, x, y, model.get_logits(x_adv_sub),
+                          x_test, y_test, args=eval_params)
+  
+  elif ATTACK == 'cwl2':  
+    cwl2_par = {'binary_search_steps':9,
+            'max_iterations':2000,
+            'abort_early':True,
+            'learning_rate':0.01,
+            'batch_size':1,
+            'initial_const':0.01,
+            'confidence':20}
+    cwl2 = CarliniWagnerL2(model, sess=sess) # Testing
+    X_test = x_test[:50] 
+    Y_test = y_test[:50]
+    # can do whole test set on our machine if we include only 1 instance of each sample in x_test
+    adv_inputs = np.array([[instance] * 1 for instance in X_test], dtype=np.float32)
+    adv_inputs = adv_inputs.reshape((X_test.shape[0]*1, 28, 28, 1))
+    x_adv_sub = cwl2.generate_np(adv_inputs, **cwl2_par)
+    
+    
+    # DEBUG DELETE
+    print(x_adv_sub.shape)
+    # DEBUG DELETE
 
-  # Craft adversarial examples using the substitute
-  eval_params = {'batch_size': batch_size}
-  x_adv_sub = fgsm.generate(x, **fgsm_par)
+    x_adv_sub = tf.convert_to_tensor(x_adv_sub, dtype=tf.float32)
 
-  # Evaluate the accuracy of the "black-box" model on adversarial examples
-  accuracy = model_eval(sess, x, y, model.get_logits(x_adv_sub),
-                        x_test, y_test, args=eval_params)
+    # Evaluate the accuracy of the "black-box" model on adversarial examples
+    #eval_params = {'batch_size': batch_size}
+    eval_params = {'batch_size' : 50}
+    accuracy = model_eval(sess, x, y, model.get_logits(x_adv_sub), X_test, Y_test, args=eval_params)
+    
+  # End time
+  seconds = time.time() - start
+  
   print('Test accuracy of oracle on adversarial examples generated '
         'using the substitute: ' + str(accuracy))
+  print('Took {:.5f} seconds'.format(seconds))
   accuracies['bbox_on_sub_adv_ex'] = accuracy
 
   return accuracies
