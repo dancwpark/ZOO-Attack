@@ -7,12 +7,11 @@
 ## contained in the LICENCE file in this directory.
 
 from setup_cifar import CIFAR, CIFARModel
-from setup_mnist import MNIST, MNISTModel
+from setup_mnist_noise import MNIST, MNISTModel
 from setup_inception import ImageNet, InceptionModel
 
 import tensorflow as tf
 import numpy as np
-import keras
 
 import argparse
 parser = argparse.ArgumentParser()
@@ -29,8 +28,7 @@ BATCH_SIZE = args['batchsize']
 
 with tf.Session() as sess:
     if args['dataset'] == 'mnist':
-        #data, model = MNIST(), MNISTModel("models/mnist-distilled-100", sess)
-        data, model = MNIST(), MNISTModel("models/mnist", sess, use_log=True)
+        data, model = MNIST(), MNISTModel(restore="models/mnist", session=sess, use_log=True,noise=0.01)
     elif args['dataset'] == 'cifar10':
         data, model = CIFAR(), CIFARModel("models/cifar-distilled-100", sess)
     elif args['dataset'] == 'imagenet':
@@ -40,7 +38,7 @@ with tf.Session() as sess:
         x = tf.placeholder(tf.float32, (None, model.image_size, model.image_size, model.num_channels))
         y = model.predict(x)
         if args['defense']:
-            y = y+keras.backend.random_normal(tf.shape(y), mean=0.0, stddev=args['noise'])
+            y = y+tf.keras.backend.random_normal(tf.shape(y), mean=0.0, stddev=args['noise'])
         elif args['shuffle']:
             # TODO: implement non-maximal class swapping
             # get the index, probability of the highest confidence class
@@ -54,7 +52,7 @@ with tf.Session() as sess:
             def gmm_noise(p):
                 deltas = tf.reduce_max(p) - p
                 delta2 = tf.reduce_max(deltas)
-                eps_vecs = [keras.backend.random_normal(tf.shape(p), 
+                eps_vecs = [tf.keras.backend.random_normal(tf.shape(p), 
                             mean=delta2*mean_params[i],
                             stddev=std_params[i]) for i in range(M)]                
                 m = tf.random.uniform((1,), minval=0, maxval=M, dtype=tf.int32)

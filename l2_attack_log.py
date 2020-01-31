@@ -97,11 +97,20 @@ class CarliniL2:
         
         # defense strategy, add random noise to the logits
         if self.DEFENSE: # Adaptive attack defined by k
+            temp = tf.Variable(np.zeros(shape), dtype=tf.float32)
             def_noise = tf.zeros(tf.shape(self.output))
-            for i in range(self.K_SAMPS):
-                #def_noise = def_noise+tf.random.normal(tf.shape(self.output), mean=0.0, stddev=noise)
-                def_noise = def_noise+K.random_normal(tf.shape(self.output), mean=0., stddev=noise)
-            self.output = self.output + (def_noise / self.K_SAMPS)
+            for ls in range (self.K_SAMPS):
+                for i in range(self.K_SAMPS):
+                    #def_noise = def_noise+tf.random.normal(tf.shape(self.output), mean=0.0, stddev=noise)
+                    def_noise = def_noise + K.random_normal(tf.shape(self.output), mean=0.0, stddev=noise)
+                temp_var = K.exp((self.output + (def_noise / self.K_SAMPS)))
+                temp += temp_var + K.random_normal(tf.shape(self.output), mean=0.0, stddev=noise)
+            self.output = K.tf.div(temp, self.K_SAMPS)
+            self.output += def_noise/self.K_SAMPS # delete
+            self.output = tf.nn.softmax(self.output) # delete
+            self.outpt = K.log(self.output)
+                
+
         elif self.MIX_DEFENSE:
             std_params =  [0.1, 0.05, 0.03, 0.02, 0.01]
             mean_params = [0, 0.5, 0.75, 0.25, 1.0]

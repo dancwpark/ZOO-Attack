@@ -15,6 +15,7 @@ import scipy.misc
 from numba import jit
 import math
 import time
+import keras.backend as K
 
 BINARY_SEARCH_STEPS = 1  # number of times to adjust the constant with binary search
 MAX_ITERATIONS = 10000   # number of iterations to perform gradient descent
@@ -262,10 +263,15 @@ class BlackBoxL2:
         
         # defense strategy, add random noise to the logits
         if self.DEFENSE:
-            def_noise = tf.random.normal(tf.shape(self.output), mean=0.0, stddev=noise)
+            #def_noise = tf.random.normal(tf.shape(self.output), mean=0.0, stddev=noise)
+            def_noise = K.random_normal(tf.shape(self.output), mean=0.0, stddev=noise)
             for i in range(self.K_SAMPS-1):
-                def_noise = def_noise+tf.random.normal(tf.shape(self.output), mean=0.0, stddev=noise)
+                #def_noise = def_noise+tf.random.normal(tf.shape(self.output), mean=0.0, stddev=noise)
+                def_noise = def_noise + K.random_normal(tf.shape(self.output), mean=0.0, stddev=noise)
             self.output = self.output + (def_noise / self.K_SAMPS)
+           # self.output = K.exp(self.output) # delete
+           # self.output += def_noise # delete
+           # self.output = tf.nn.softmax(self.output) # delete
         elif self.MIX_DEFENSE:
             std_params =  [0.1, 0.05, 0.03, 0.02, 0.01]
             mean_params = [0, 0.5, 0.75, 0.25, 1.0]
@@ -273,9 +279,12 @@ class BlackBoxL2:
             def gmm_noise(p):
                 deltas = tf.reduce_max(p) - p
                 delta2 = tf.reduce_max(deltas)
-                eps_vecs = [tf.random.normal(tf.shape(p), 
-                            mean=delta2*mean_params[i],
-                            stddev=std_params[i]) for i in range(M)]                
+                #eps_vecs = [tf.random.normal(tf.shape(p), 
+                #            mean=delta2*mean_params[i],
+                #            stddev=std_params[i]) for i in range(M)]
+                eps_vecs = [K.random_normal(tf.shape(p),
+                    mean=delta2*mean_params[i],
+                    stddev=std_params[i]) for i in range (M)]
                 m = tf.random.uniform((1,), minval=0, maxval=M, dtype=tf.int32)
                 return tf.nn.embedding_lookup(tf.stack(eps_vecs), m)
 
@@ -391,6 +400,7 @@ class BlackBoxL2:
         prev_modifier = np.squeeze(prev_modifier)
         old_shape = prev_modifier.shape
         if gen_double:
+            print(old_shape)
             new_shape = (old_shape[0]*2, old_shape[1]*2, old_shape[2])
         else:
             new_shape = old_shape

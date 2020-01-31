@@ -15,10 +15,12 @@ import random
 import time
 
 from setup_cifar import CIFAR, CIFARModel
-from setup_mnist import MNIST, MNISTModel
+#from setup_mnist import MNIST, MNISTModel
+from setup_mnist_noise import MNIST, MNISTModel
 from setup_inception import ImageNet, InceptionModel
 
-from l2_attack import CarliniL2
+#from l2_attack import CarliniL2
+from l2_attack_log import CarliniL2
 from l2_attack_black import BlackBoxL2
 
 from PIL import Image

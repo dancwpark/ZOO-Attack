@@ -104,7 +104,7 @@ def prep_bbox(sess, x, y, x_train, y_train, x_test, y_test,
                         args=eval_params)
   print('Test accuracy of black-box on legitimate test '
         'examples: ' + str(accuracy))
-
+  input(">>")
   return model, predictions, accuracy
 
 
