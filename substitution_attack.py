@@ -22,8 +22,8 @@ from keras.layers import Conv2D, MaxPooling2D
 from keras.optimizers import SGD
 from keras.models import model_from_yaml
 from PIL import Image
-#from l2_attack import CarliniL2
-from l2_attack_w_defense import CarliniL2 # with defense and averaging
+from l2_attack import CarliniL2
+#from l2_attack_w_defense import CarliniL2 # with defense and averaging
 ################
 # Target Model #
 ################
@@ -69,6 +69,10 @@ def get_target_labels(data):
             optimizer=sgd,
             metrics=['accuracy'])
     train_labels = model.predict(data.train_data)
+    print(train_labels[0])
+    print()
+    print(model.model(data.train_data)[0])
+    input()
     validation_labels = model.predict(data.validation_data)
     test_labels = model.predict(data.test_data)
     #  Need to turn [p, p, ..., p] to y
